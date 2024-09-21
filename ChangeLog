@@ -2,3 +2,5 @@
 	* Initial package creation.
 2024-09-21 Fred Gleason <fredg@paravelsystems.com>
 	* Enabled the 'make rpm' production.
+2024-09-21 Fred Gleason <fredg@paravelsystems.com>
+	* Incremented the package version to 0.1.0.
