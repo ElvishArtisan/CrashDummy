@@ -1,0 +1,13 @@
+Source: crashdummy
+Section: audio
+Priority: optional
+Maintainer: Fred Gleason <fredg@paravelsystems.com>
+Build-Depends: debhelper-compat (= 12), autotools-dev
+Standards-Version: 4.4.1
+
+Package: crashdummy
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Service for generating crash events
+ CrashDummy is a service for intentionally generating crash events. Useful
+ for testing automatic crash detection systems --e.g. Abrt.
