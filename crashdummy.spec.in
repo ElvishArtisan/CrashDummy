@@ -1,8 +1,8 @@
-## drouter.spec.in
+## crashdummy.spec.in
 ##
-##    Dynamic router framework for Livewire
+##    Service for generating crash events
 ##
-##    Copyright (C) 2017-2021 Fred Gleason <fredg@paravelsystems.com>
+##    Copyright (C) 2024 Fred Gleason <fredg@paravelsystems.com>
 ##
 ##    This program is free software; you can redistribute it and/or modify
 ##    it under the terms of version 2 of the GNU General Public License as
@@ -19,51 +19,18 @@
 ##    Boston, MA  02111-1307  USA
 ##
 
-Summary: Dynamic router framework for Livewire
-Name: drouter
+Summary: Service for generating crash events
+Name: crashdummy
 Version: @VERSION@
 Release: @RPM_RELEASE@%{?dist}
 License: GPLv2
 Source: %{name}-@VERSION@.tar.gz
-BuildRequires: qt5-qtbase-devel, systemd-devel, python36
 BuildRoot: /var/tmp/%{name}-@VERSION@
-
-%package panels
-Summary: GUI control panels for DRouter
-Requires: qt5-qtbase-mysql firefox lwmon
-
-%package python
-Summary: Python API for using state scripts with Drouter
-Requires: python36
-
-%package server
-Summary: Core server components for Drouter.
-Requires: drouter = @VERSION@, drouter-python = @VERSION@, mariadb-server, qt5-qtbase-mysql
-
-%package devel
-Summary: Development components for Drouter
-Requires: drouter = @VERSION@
+Requires: abrt-cli
 
 %description
-Drouter is a dynamic router framework for controling a crosspoint media
-routers. It includes a server core, deployable control applets (known
-as "panels" as well as a Python API that allows automatic monitoring.
-
-%description panels
-GUI control panels for DRouter. Most of these actually use Software
-Authority protocol and so should work fine with the various PathFinder
-versions as well.
-
-%description server
-The core server components for Drouter.
-
-%description python
-Python API for the Drouter framework. This allows creation of "state scripts"
-that can be used to provide automated responses to changes in the state
-of the Livewire network.
-
-%description devel
-Files for developing Qt applications for use with Drouter.
+CrashDummy is a service for intentionally generating crash events. Useful
+for testing automatic crash detection systems --e.g. Abrt.
 
 
 %prep
@@ -80,58 +47,22 @@ make -j @CPUS_AVAIL@
 %install
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/etc/drouter/maps.d
-mkdir -p $RPM_BUILD_ROOT/etc/drouter/scripts.d
-mkdir -p $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}
-cp AUTHORS $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/
-cp ChangeLog $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/
-cp COPYING $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/
-cp NEWS $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/
-cp README $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/
-cp conf/drouter.conf-sample $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/
-mkdir -p $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/protocols
-cp docs/protocol_d.pdf $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/protocols/
-mkdir -p $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples
-scripts/install_python.sh python/examples/show_changes.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/show_changes.py
-scripts/install_python.sh python/examples/show_destinations.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/show_destinations.py
-scripts/install_python.sh python/examples/show_gpis.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/show_gpis.py
-scripts/install_python.sh python/examples/show_gpos.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/show_gpos.py
-scripts/install_python.sh python/examples/show_nodes.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/show_nodes.py
-scripts/install_python.sh python/examples/show_sources.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/show_sources.py
-scripts/install_python.sh python/examples/silence_alarm.py $RPM_BUILD_ROOT/%{_datadir}/doc/drouter-%{version}/examples/silence_alarm.py
 
 
 %post
 if [ -x %{_bindir}/systemctl ] ; then
     /bin/systemctl daemon-reload
-    /bin/systemctl start drouter.socket
-    /bin/systemctl enable drouter.socket
-    /bin/systemctl start drouter.service
-    /bin/systemctl enable drouter.service
-fi
-if test "@DISTRO@" = "suse" ; then
-  PACKAGE_DOC_DIR=%_docdir/%{name}
-fi
-if test "@DISTRO@" = "redhat" ; then
-  PACKAGE_DOC_DIR=%_docdir/%{name}-@VERSION@
-fi
-if test ! -e /etc/drouter/drouter.conf ; then
-  mkdir -p /etc/drouter
-  mkdir -p /etc/drouter/maps.d
-  mkdir -p /etc/drouter/scripts.d
-  cp $PACKAGE_DOC_DIR/drouter.conf-sample /etc/drouter/drouter.conf
-  mkdir -p /var/cache/drouter
-  chown root:root /var/cache/drouter
-  chmod 0600 /var/cache/drouter
+    systemctl start abrtd abrt-cccp
+    systemctl enable abrtd abrt-cccp
 fi
 
 
 %preun
 if [ -x %{_bindir}/systemctl ] ; then
-    /bin/systemctl stop drouter.socket
-    /bin/systemctl disable drouter.socket
-    /bin/systemctl stop drouter.service
-    /bin/systemctl disable drouter.service
+    /bin/systemctl stop crashdummy.service
+    /bin/systemctl disable crashdummy.service
+    systemctl disable abrtd abrt-cccp
+    systemctl stop abrtd abrt-cccp
 fi
 
 
@@ -147,91 +78,10 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%{_libdir}/libdrouter.so.@INTERFACE_MAJOR@.@INTERFACE_MINOR@.@INTERFACE_POINT@
-%{_libdir}/libdrouter.so.@INTERFACE_MAJOR@
-%{_datadir}/doc/drouter-%{version}/protocols/*
-%{_datadir}/doc/drouter-%{version}/AUTHORS
-%{_datadir}/doc/drouter-%{version}/ChangeLog
-%{_datadir}/doc/drouter-%{version}/COPYING
-%{_datadir}/doc/drouter-%{version}/NEWS
-%{_datadir}/doc/drouter-%{version}/README
-
-
-%files panels
-%defattr(-,root,root)
-%{_bindir}/actionpanel
-%{_bindir}/buttonpanel
-%{_bindir}/eventlogpanel
-%{_bindir}/outputpanel
-%{_bindir}/shotpanel
-%{_bindir}/xpointpanel
-%{_bindir}/xypanel
-%{_datadir}/man/man1/actionpanel.1.gz
-%{_datadir}/man/man1/buttonpanel.1.gz
-%{_datadir}/man/man1/eventlogpanel.1.gz
-%{_datadir}/man/man1/outputpanel.1.gz
-%{_datadir}/man/man1/shotpanel.1.gz
-%{_datadir}/man/man1/xpointpanel.1.gz
-%{_datadir}/man/man1/xypanel.1.gz
-%{_datadir}/icons/hicolor/16x16/apps/drouter.png
-%{_datadir}/icons/hicolor/48x48/apps/drouter.png
-
-
-%files server
-%defattr(-,root,root)
-%{_bindir}/dmap
-%{_bindir}/drouter_init_db.sh
-%{_bindir}/pf_import.py
-%{_sbindir}/drouterd
-%{_sbindir}/dprotod
-%{_datadir}/man/man1/dmap.1.gz
-%{_datadir}/man/man5/drouter.conf.5.gz
-%{_datadir}/man/man5/drouter.map.5.gz
-%{_datadir}/man/man8/drouterd.8.gz
-%dir /var/cache/drouter
-/lib/systemd/system/drouter.service
-/lib/systemd/system/drouter.socket
-%dir /etc/drouter/maps.d
-%dir /etc/drouter/scripts.d
-%{_datadir}/doc/drouter-%{version}/drouter.conf-sample
-
-
-%files python
-%defattr(-,root,root)
-%{_bindir}/dlist
-%{_bindir}/dstate
-%{_libdir}/python@PYTHON_VERSION@/site-packages/Drouter
-%{_datadir}/man/man1/dlist.1.gz
-%{_datadir}/man/man1/dstate.1.gz
-%{_datadir}/doc/drouter-%{version}/examples/*
-
-
-%files devel
-%defattr(-,root,root)
-%{_includedir}/drouter/*
-%{_libdir}/libdrouter.so
-%{_libdir}/libdrouter.a
-%{_libdir}/libdrouter.la
+%{_sbindir}/crashdummy
+/lib/systemd/system/crashdummy.service
 
 
 %changelog
-* Mon Mar 11 2024 Fred Gleason <fredg@paravelsystems.com>
--- Add 'server' and 'devel' subpackages.
-* Wed Jan 24 2024 Fred Gleason <fredg@paravelsystems.com>
--- Refactored file layout for dynamic linking.
-* Sat Jul 30 2022 Fred Gleason <fredg@paravelsystems.com>
--- Removed the 32x32 version of the 'drouter' icon.
-* Thu Jul 21 2022 Fred Gleason <fredg@paravelsystems.com>
--- Added eventlogpanel(1).
-* Thu May  7 2020 Fred Gleason <fredg@paravelsystems.com>
--- Added 'lwmon' and 'firefox' dependencies to the 'gui' subpackage.
-* Thu Aug  8 2019 Fred Gleason <fredg@paravelsystems.com>
--- Added the shotpanel(1) man page.
-* Tue Mar  6 2018 Fred Gleason <fredg@paravelsystems.com>
--- Added python API example scripts.
-* Mon Mar  5 2018 Fred Gleason <fredg@paravelsystems.com>
--- Added a 'python' subpackage.
-* Thu Oct 12 2017 Fred Gleason <fredg@paravelsystems.com>
--- Added a 'panels' subpackage.
-* Thu Oct  5 2017 Fred Gleason <fredg@paravelsystems.com>
+* Sat Sep 21 2024 Fred Gleason <fredg@paravelsystems.com>
 -- Initial RPM creation.
